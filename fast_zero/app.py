@@ -1,7 +1,8 @@
 from http import HTTPStatus
 
-from fastapi import FastAPI, HTTPException
-from starlette.responses import HTMLResponse
+from fastapi import FastAPI, HTTPException, Request
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import HTMLResponse, JSONResponse
 
 from fast_zero.schemas import Message, UserDB, UserList, UserPublic, UserSchema
 
@@ -66,3 +67,24 @@ def delete_user(user_id: int):
     del database[user_id - 1]
 
     return {'message': 'User deleted'}
+
+
+@app.get(
+    '/users/{user_id}', status_code=HTTPStatus.OK, response_model=UserPublic
+)
+def find_user(user_id: int) -> UserPublic:
+    if user_id > len(database) or user_id < 1:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail='User not found'
+        )
+
+    user_with_id = database[user_id - 1]
+
+    return UserPublic(**user_with_id.model_dump())
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code, content={'message': exc.detail}
+    )
