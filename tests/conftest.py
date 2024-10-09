@@ -1,11 +1,15 @@
+from contextlib import contextmanager
+from datetime import datetime
+
 import pytest
-from sqlalchemy import StaticPool, create_engine
+from sqlalchemy import StaticPool, create_engine, event
 from sqlalchemy.orm import Session
 from starlette.testclient import TestClient
 
 from fast_zero.app import app
 from fast_zero.database import get_session
 from fast_zero.models import User, table_registry
+from fast_zero.security import get_password_hash
 
 
 @pytest.fixture
@@ -37,9 +41,36 @@ def session():
 
 @pytest.fixture
 def user(session):
-    user = User(username='Teste', email='teste@test.com', password='testtest')
+    password = 'testtest'
+    user = User(
+        username='Teste',
+        email='teste@test.com',
+        password=get_password_hash(password),
+    )
     session.add(user)
     session.commit()
     session.refresh(user)
 
+    user.clean_password = 'testtest'
+
     return user
+
+
+@contextmanager
+def _mock_db_time(*, model, time=datetime(2024, 1, 1)):
+    def fake_time_hook(mapper, connection, target):
+        if hasattr(target, 'created_at'):
+            target.created_at = time
+        if hasattr(target, 'update_at'):
+            target.update_at = time
+
+    event.listen(model, 'before_insert', fake_time_hook)
+
+    yield time
+
+    event.remove(model, 'before_insert', fake_time_hook)
+
+
+@pytest.fixture
+def mock_db_time():
+    return _mock_db_time
