@@ -61,8 +61,8 @@ def _mock_db_time(*, model, time=datetime(2024, 1, 1)):
     def fake_time_hook(mapper, connection, target):
         if hasattr(target, 'created_at'):
             target.created_at = time
-        if hasattr(target, 'update_at'):
-            target.update_at = time
+        if hasattr(target, 'updated_at'):
+            target.updated_at = time
 
     event.listen(model, 'before_insert', fake_time_hook)
 
@@ -74,3 +74,12 @@ def _mock_db_time(*, model, time=datetime(2024, 1, 1)):
 @pytest.fixture
 def mock_db_time():
     return _mock_db_time
+
+
+@pytest.fixture
+def token(client, user):
+    response = client.post(
+        '/token',
+        data={'username': user.email, 'password': user.clean_password},
+    )
+    return response.json()['access_token']
