@@ -7,16 +7,16 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from fast_zero.database import get_session
-from fast_zero.models import User
-from fast_zero.schemas import (
+from fast_zero.core.database.database import get_session
+from fast_zero.core.security import get_current_user, get_password_hash
+from fast_zero.models.models import User
+from fast_zero.schemas.schemas import (
     FiltersPage,
     Message,
     UserList,
     UserPublic,
     UserSchema,
 )
-from fast_zero.security import get_current_user, get_password_hash
 
 router = APIRouter(prefix='/users', tags=['users'])
 Session = Annotated[Session, Depends(get_session)]

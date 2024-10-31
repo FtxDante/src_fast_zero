@@ -1,15 +1,25 @@
 from contextlib import contextmanager
 from datetime import datetime
 
+import factory
 import pytest
 from sqlalchemy import StaticPool, create_engine, event
 from sqlalchemy.orm import Session
 from starlette.testclient import TestClient
 
 from fast_zero.app import app
-from fast_zero.database import get_session
-from fast_zero.models import User, table_registry
-from fast_zero.security import get_password_hash
+from fast_zero.core.database.database import get_session
+from fast_zero.core.security import get_password_hash
+from fast_zero.models.models import User, table_registry
+
+
+class UserFactory(factory.Factory):
+    class Meta:
+        model = User
+
+    username = factory.Sequence(lambda n: f'test{n}')
+    email = factory.LazyAttribute(lambda obj: f'{obj.username}@test.com')
+    password = factory.LazyAttribute(lambda obj: f'{obj.username}@example.com')
 
 
 @pytest.fixture
@@ -42,11 +52,7 @@ def session():
 @pytest.fixture
 def user(session):
     password = 'testtest'
-    user = User(
-        username='Teste',
-        email='teste@test.com',
-        password=get_password_hash(password),
-    )
+    user = UserFactory(password=get_password_hash(password))
     session.add(user)
     session.commit()
     session.refresh(user)
@@ -54,6 +60,19 @@ def user(session):
     user.clean_password = 'testtest'
 
     return user
+
+
+@pytest.fixture
+def other_user(session):
+    password = 'testtest'
+    other_user = UserFactory(password=get_password_hash(password))
+    session.add(other_user)
+    session.commit()
+    session.refresh(other_user)
+
+    other_user.clean_password = 'testtest'
+
+    return other_user
 
 
 @contextmanager

@@ -1,6 +1,6 @@
 from http import HTTPStatus
 
-from fast_zero.schemas import UserPublic
+from fast_zero.schemas.schemas import UserPublic
 
 
 def test_create_user(client):
@@ -25,8 +25,8 @@ def test_create_user_should_fail_when_username_already_exists(client, user):
     response = client.post(
         '/users/',
         json={
-            'username': 'Teste',
-            'email': 'alice@example.com',
+            'username': user.username,
+            'email': 'test123@example.com',
             'password': 'secret',
         },
     )
@@ -40,7 +40,7 @@ def test_create_user_should_fail_when_email_already_exists(client, user):
         '/users/',
         json={
             'username': 'alice',
-            'email': 'teste@test.com',
+            'email': user.email,
             'password': 'secret',
         },
     )
@@ -106,11 +106,9 @@ def test_update_integrity_error(client, user, token):
     }
 
 
-def test_update_user_when_the_user_try_to_update_another_user(
-    client, user, token
-):
+def test_update_user_with_wrong_user(client, other_user, token):
     response = client.put(
-        '/users/403',
+        f'/users/{other_user.id}',
         headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'bob',
@@ -118,9 +116,8 @@ def test_update_user_when_the_user_try_to_update_another_user(
             'password': 'mynewpassword',
         },
     )
-
-    assert response.status_code == HTTPStatus.FORBIDDEN
     assert response.json() == {'message': 'Not enough permissions'}
+    assert response.status_code == HTTPStatus.FORBIDDEN
 
 
 def test_delete_user(client, user, token):
@@ -132,14 +129,11 @@ def test_delete_user(client, user, token):
     assert response.json() == {'message': 'User deleted'}
 
 
-def test_delete_user_should_fail_when_the_user_try_to_delete_another_user(
-    client, user, token
-):
+def test_delete_user_wrong_user(client, other_user, token):
     response = client.delete(
-        '/users/403',
+        f'/users/{other_user.id}',
         headers={'Authorization': f'Bearer {token}'},
     )
-
     assert response.status_code == HTTPStatus.FORBIDDEN
     assert response.json() == {'message': 'Not enough permissions'}
 
@@ -149,9 +143,9 @@ def test_find_one_user(client, user):
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {
-        'username': 'Teste',
-        'email': 'teste@test.com',
-        'id': 1,
+        'username': user.username,
+        'email': user.email,
+        'id': user.id,
     }
 
 

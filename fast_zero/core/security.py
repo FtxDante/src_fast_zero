@@ -3,17 +3,17 @@ from http import HTTPStatus
 
 from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
-from jwt import DecodeError, decode, encode
+from jwt import DecodeError, ExpiredSignatureError, decode, encode
 from pwdlib import PasswordHash
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from starlette.exceptions import HTTPException
 from zoneinfo import ZoneInfo
 
-from fast_zero.database import get_session
-from fast_zero.models import User
-from fast_zero.schemas import TokenData
-from fast_zero.settings import Settings
+from fast_zero.core.database.database import get_session
+from fast_zero.core.settings import Settings
+from fast_zero.models.models import User
+from fast_zero.schemas.schemas import TokenData
 
 settings = Settings()
 
@@ -42,6 +42,7 @@ def verify_password(plain_password: str, hashed_password: str):
     return pwd_context.verify(plain_password, hashed_password)
 
 
+# TODO rever como isso funciona exatamente
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/token')
 
 
@@ -66,8 +67,12 @@ def get_current_user(
 
     except DecodeError:
         raise credentials_exception
+    except ExpiredSignatureError:
+        raise credentials_exception
 
-    user = session.scalar(select(User).where(username == token_data.username))
+    user = session.scalar(
+        select(User).where(User.email == token_data.username)
+    )
 
     if not user:
         raise credentials_exception
