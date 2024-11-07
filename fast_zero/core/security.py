@@ -76,5 +76,4 @@ def get_current_user(
 
     if not user:
         raise credentials_exception
-
     return user
